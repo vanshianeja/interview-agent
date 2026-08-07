@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AI Interview Agent</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 40px auto; background: #0f1115; color: #eee; }
+    #chat { border: 1px solid #333; border-radius: 8px; padding: 16px; height: 500px; overflow-y: auto; margin-bottom: 12px; }
+    .msg { padding: 10px 14px; margin: 8px 0; border-radius: 12px; max-width: 80%; line-height: 1.4; }
+    .agent { background: #1e2530; margin-right: auto; }
+    .user { background: #2a4d8f; margin-left: auto; text-align: right; }
+    #inputRow { display: flex; gap: 8px; }
+    input { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #333; background: #1a1d24; color: #eee; }
+    button { padding: 10px 18px; border-radius: 6px; border: none; background: #2a4d8f; color: white; cursor: pointer; }
+    button:disabled { opacity: 0.5; }
+    #feedback { margin-top: 16px; padding: 16px; border: 1px solid #333; border-radius: 8px; display: none; }
+    #feedback h3 { margin-top: 0; }
+    #feedback ul { margin: 4px 0 12px 20px; }
+  </style>
+</head>
+<body>
+  <h2>AI Interview Agent</h2>
+  <div id="chat"></div>
+  <div id="inputRow">
+    <input id="msgInput" placeholder="Type your answer..." />
+    <button id="sendBtn">Send</button>
+  </div>
+  <div id="feedback"></div>
+
+  <script>
+    const sessionId = "web-" + Math.random().toString(36).slice(2);
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const feedbackDiv = document.getElementById("feedback");
+
+    const sampleCandidate = {
+      member: { id: "CAND-010", name: "Gerald Combs", jobRole: "IT Support Specialist",
+        yearsExperience: 20, education: "AAS Information Technology", status: "COMPLETED" },
+      missions: [
+        { day: 8, title: "Vector Databases Overview", passed: false, attempts: 4 },
+        { day: 22, title: "Multi-Agent Orchestration", passed: false, attempts: 3 },
+        { day: 28, title: "Docker & Kubernetes Deployment", passed: true, attempts: 1 },
+        { day: 29, title: "Monitoring, Logging & Observability", passed: true, attempts: 1 }
+      ],
+      signals: { commitDays: 22, missionsCompleted: 23, missionsFirstTry: 1 }
+    };
+
+    function addMsg(text, cls) {
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function startInterview() {
+      const res = await fetch("/api/interview", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, candidate: sampleCandidate })
+      });
+      const data = await res.json();
+      addMsg(data.reply, "agent");
+    }
+
+    async function sendMessage() {
+      const message = input.value.trim();
+      if (!message) return;
+      addMsg(message, "user");
+      input.value = "";
+      sendBtn.disabled = true;
+
+      const res = await fetch("/api/interview", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, message })
+      });
+      const data = await res.json();
+
+      if (data.done) {
+        addMsg(data.reply, "agent");
+        showFeedback(data.feedback);
+        input.disabled = true;
+        sendBtn.disabled = true;
+      } else {
+        addMsg(data.reply, "agent");
+        sendBtn.disabled = false;
+      }
+    }
+
+    function showFeedback(fb) {
+      feedbackDiv.style.display = "block";
+      feedbackDiv.innerHTML = `
+        <h3>Feedback</h3>
+        <p>${fb.summary}</p>
+        <b>Strengths</b><ul>${fb.strengths.map(s => `<li>${s}</li>`).join("")}</ul>
+        <b>Gaps</b><ul>${fb.gaps.map(g => `<li>${g}</li>`).join("")}</ul>
+        <b>Next Steps</b><ul>${fb.next.map(n => `<li>${n}</li>`).join("")}</ul>
+      `;
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+
+    startInterview();
+  </script>
+</body>
+</html>

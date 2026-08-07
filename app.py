@@ -2,9 +2,14 @@ from flask import Flask, request, jsonify
 import json, os, random
 from dotenv import load_dotenv
 import requests
+from flask import render_template
 
 load_dotenv()
 app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
