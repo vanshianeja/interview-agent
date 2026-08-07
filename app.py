@@ -9,9 +9,8 @@ app = Flask(__name__)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Swap these for the exact models you used in Aura if different
 MODELS = [
-    "google/gemma-2-9b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
     "meta-llama/llama-3.1-8b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
 ]

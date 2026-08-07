@@ -1,0 +1,18 @@
+{
+  "sessionId": "test-1",
+  "candidate": {
+    "member": {
+      "id": "CAND-010",
+      "name": "Gerald Combs",
+      "jobRole": "IT Support Specialist",
+      "yearsExperience": 20,
+      "education": "AAS Information Technology",
+      "status": "COMPLETED"
+    },
+    "missions": [
+      { "day": 8, "title": "Vector Databases Overview", "passed": false, "attempts": 4 },
+      { "day": 22, "title": "Multi-Agent Orchestration", "passed": false, "attempts": 3 }
+    ],
+    "signals": { "commitDays": 22, "missionsCompleted": 23, "missionsFirstTry": 1 }
+  }
+}

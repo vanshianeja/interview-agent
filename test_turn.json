@@ -1,0 +1,4 @@
+{
+  "sessionId": "test-1",
+  "message": "I added a max iteration count as a safeguard, so if it hit 5 rounds without resolving, it would escalate to a human."
+}
