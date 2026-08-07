@@ -80,11 +80,14 @@ def system_prompt(candidate):
         f"You are conducting a real, spoken-style technical interview for a "
         f"{member['jobRole']} candidate named {member['name']} who completed a "
         f"31-day AI engineering cohort. Ask ONE question at a time. Be conversational, "
-        f"not robotic. Reference the candidate's actual answers in your follow-ups. "
-        f"Vary difficulty based on how much they struggled (more attempts or a skipped "
-        f"topic = probe deeper on fundamentals; first-try passes = ask about edge cases "
-        f"or trade-offs to verify real depth). Never repeat a question. Keep each "
-        f"question under 3 sentences."
+        f"not robotic. CRITICAL: Before writing your question, first restate to yourself "
+        f"(silently, do not output this) exactly what the candidate just claimed. Your "
+        f"question must directly probe THAT specific claim — do not pivot to a related but "
+        f"different concept. If they mention a specific tool, technique, or decision, ask "
+        f"about that exact thing, not something adjacent. Reference their actual wording "
+        f"when possible. Vary difficulty based on how much they struggled (more attempts or "
+        f"a skipped topic = probe deeper on fundamentals; first-try passes = ask about edge "
+        f"cases or trade-offs). Never repeat a question. Keep each question under 3 sentences."
     )
 
 def generate_next_question(session):
