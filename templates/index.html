@@ -90,17 +90,24 @@
     }
 
     async function startInterview() {
-      showTyping();
-      const res = await fetch("/api/interview", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, candidate: sampleCandidate })
-      });
-      const data = await res.json();
-      hideTyping();
-      questionCount = 1;
-      updateProgress(false);
-      addMsg(data.reply, "agent");
-    }
+        showTyping();
+        try {
+            const res = await fetch("/api/interview", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId, candidate: sampleCandidate })
+            });
+            if (!res.ok) throw new Error("Server error");
+            const data = await res.json();
+            hideTyping();
+            questionCount = 1;
+            updateProgress(false);
+            addMsg(data.reply, "agent");
+        } catch (err) {
+            hideTyping();
+            progressDiv.textContent = "Connection issue";
+            addMsg("Sorry, couldn't start the interview. Please refresh the page to try again.", "agent");
+        }
+        }
 
     async function sendMessage() {
       const message = input.value.trim();
