@@ -5,10 +5,17 @@
   <title>AI Interview Agent</title>
   <style>
     body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 40px auto; background: #0f1115; color: #eee; }
+    h2 { margin-bottom: 4px; }
+    #progress { font-size: 13px; color: #999; margin-bottom: 16px; }
     #chat { border: 1px solid #333; border-radius: 8px; padding: 16px; height: 500px; overflow-y: auto; margin-bottom: 12px; }
     .msg { padding: 10px 14px; margin: 8px 0; border-radius: 12px; max-width: 80%; line-height: 1.4; }
     .agent { background: #1e2530; margin-right: auto; }
     .user { background: #2a4d8f; margin-left: auto; text-align: right; }
+    .typing { background: #1e2530; margin-right: auto; color: #888; font-style: italic; }
+    .typing span { display: inline-block; animation: blink 1.4s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
     #inputRow { display: flex; gap: 8px; }
     input { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #333; background: #1a1d24; color: #eee; }
     button { padding: 10px 18px; border-radius: 6px; border: none; background: #2a4d8f; color: white; cursor: pointer; }
@@ -20,6 +27,7 @@
 </head>
 <body>
   <h2>AI Interview Agent</h2>
+  <div id="progress">Starting interview...</div>
   <div id="chat"></div>
   <div id="inputRow">
     <input id="msgInput" placeholder="Type your answer..." />
@@ -33,6 +41,10 @@
     const input = document.getElementById("msgInput");
     const sendBtn = document.getElementById("sendBtn");
     const feedbackDiv = document.getElementById("feedback");
+    const progressDiv = document.getElementById("progress");
+
+    let questionCount = 0;
+    const estimatedTotal = 8;
 
     const sampleCandidate = {
       member: { id: "CAND-010", name: "Gerald Combs", jobRole: "IT Support Specialist",
@@ -52,14 +64,41 @@
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    function showTyping() {
+      const div = document.createElement("div");
+      div.className = "msg typing";
+      div.id = "typingIndicator";
+      div.innerHTML = "Interviewer is thinking<span>.</span><span>.</span><span>.</span>";
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function hideTyping() {
+      const el = document.getElementById("typingIndicator");
+      if (el) el.remove();
+    }
+
+    function updateProgress(done) {
+      if (done) {
+        progressDiv.textContent = "Interview complete";
+      } else {
+        progressDiv.textContent = `Question ${questionCount} of ~${estimatedTotal}`;
+      }
     }
 
     async function startInterview() {
+      showTyping();
       const res = await fetch("/api/interview", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, candidate: sampleCandidate })
       });
       const data = await res.json();
+      hideTyping();
+      questionCount = 1;
+      updateProgress(false);
       addMsg(data.reply, "agent");
     }
 
@@ -69,20 +108,32 @@
       addMsg(message, "user");
       input.value = "";
       sendBtn.disabled = true;
+      showTyping();
 
-      const res = await fetch("/api/interview", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, message })
-      });
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/interview", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, message })
+        });
+        if (!res.ok) throw new Error("Server error");
+        const data = await res.json();
+        hideTyping();
 
-      if (data.done) {
-        addMsg(data.reply, "agent");
-        showFeedback(data.feedback);
-        input.disabled = true;
-        sendBtn.disabled = true;
-      } else {
-        addMsg(data.reply, "agent");
+        if (data.done) {
+          addMsg(data.reply, "agent");
+          updateProgress(true);
+          showFeedback(data.feedback);
+          input.disabled = true;
+          sendBtn.disabled = true;
+        } else {
+          questionCount++;
+          updateProgress(false);
+          addMsg(data.reply, "agent");
+          sendBtn.disabled = false;
+        }
+      } catch (err) {
+        hideTyping();
+        addMsg("Sorry, something went wrong. Please try sending your answer again.", "agent");
         sendBtn.disabled = false;
       }
     }
