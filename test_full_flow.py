@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "http://127.0.0.1:5000/api/interview"
+BASE_URL = "https://interview-agent-uomx.onrender.com/api/interview"
 
 # Simulated answers - short/closed so it moves through topics fast
 answers = [
@@ -15,23 +15,24 @@ answers = [
     "The main trade-off was latency versus accuracy when choosing chunk size for retrieval.",
 ]
 
-session_id = "test-full-1"
+session_id = "test-emily-1"
 
 # Start the interview
 candidate = {
     "sessionId": session_id,
     "candidate": {
         "member": {
-            "id": "CAND-010", "name": "Gerald Combs", "jobRole": "IT Support Specialist",
-            "yearsExperience": 20, "education": "AAS Information Technology", "status": "COMPLETED"
+            "id": "CAND-003", "name": "Emily Chen", "jobRole": "AI Engineer",
+            "yearsExperience": 6, "education": "MS Artificial Intelligence", "status": "COMPLETED"
         },
         "missions": [
-            {"day": 8, "title": "Vector Databases Overview", "passed": False, "attempts": 4},
-            {"day": 22, "title": "Multi-Agent Orchestration", "passed": False, "attempts": 3},
-            {"day": 28, "title": "Docker & Kubernetes Deployment", "passed": True, "attempts": 1},
-            {"day": 29, "title": "Monitoring, Logging & Observability", "passed": True, "attempts": 1},
+            { "day": 7, "title": "Embeddings Explained", "passed": True, "attempts": 1 },
+            { "day": 11, "title": "RAG End-to-End & LLM API Basics", "passed": True, "attempts": 1 },
+            { "day": 13, "title": "Function Calling & Structured Outputs", "passed": True, "attempts": 1 },
+            { "day": 22, "title": "Multi-Agent Orchestration", "passed": True, "attempts": 1 },
+            { "day": 23, "title": "Model Context Protocol (MCP)", "passed": True, "attempts": 1 },
         ],
-        "signals": {"commitDays": 22, "missionsCompleted": 23, "missionsFirstTry": 1}
+        "signals": { "commitDays": 31, "missionsCompleted": 31, "missionsFirstTry": 30 }
     }
 }
 
