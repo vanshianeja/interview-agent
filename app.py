@@ -16,8 +16,8 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 MODELS = [
     "google/gemma-4-26b-a4b-it:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-20b:free",
 ]
 
 def call_llm(messages, temperature=0.7, max_tokens=400):
@@ -98,7 +98,14 @@ def system_prompt(candidate):
 def generate_next_question(session):
     topic_queue = session["topic_queue"]
     if not topic_queue:
-        return None
+        messages = [{"role": "system", "content": system_prompt(session["candidate"])}]
+        messages += session["history"]
+        messages.append({"role": "user", "content": (
+            "[INTERNAL] All specific curriculum topics for this candidate have been covered. "
+            "Ask one final broader question about their overall approach to building production AI "
+            "systems, or a synthesis question connecting two things they've already discussed."
+        )})
+        return call_llm(messages)
 
     topic = topic_queue.pop(0)
     session["days_covered"].add(topic["day"])
@@ -148,55 +155,59 @@ def generate_feedback(session):
 
 @app.route("/api/interview", methods=["POST"])
 def interview():
-    data = request.get_json(force=True)
-    session_id = data.get("sessionId")
-    if not session_id:
-        return jsonify({"error": "sessionId is required"}), 400
+    try:
+        data = request.get_json(force=True)
+        session_id = data.get("sessionId")
+        if not session_id:
+            return jsonify({"error": "sessionId is required"}), 400
 
-    # --- START ---
-    if "candidate" in data and session_id not in SESSIONS:
-        candidate = data["candidate"]
-        SESSIONS[session_id] = {
-            "candidate": candidate,
-            "history": [],
-            "topic_queue": build_topic_queue(candidate),
-            "days_covered": set(),
-            "questions_asked": 0,
-        }
+        # --- START ---
+        if "candidate" in data and session_id not in SESSIONS:
+            candidate = data["candidate"]
+            SESSIONS[session_id] = {
+                "candidate": candidate,
+                "history": [],
+                "topic_queue": build_topic_queue(candidate),
+                "days_covered": set(),
+                "questions_asked": 0,
+            }
+            session = SESSIONS[session_id]
+            first_question = generate_next_question(session)
+            session["history"].append({"role": "assistant", "content": first_question})
+            session["questions_asked"] += 1
+
+            member = candidate["member"]
+            welcome = f"Welcome, {member['name']}. Let's begin your interview.\n\n{first_question}"
+            return jsonify({"reply": welcome, "done": False})
+
+        # --- TURN ---
+        if session_id not in SESSIONS:
+            return jsonify({"error": "Unknown sessionId. Start the interview first."}), 400
+
         session = SESSIONS[session_id]
-        first_question = generate_next_question(session)
-        session["history"].append({"role": "assistant", "content": first_question})
+        message = data.get("message", "")
+        session["history"].append({"role": "user", "content": message})
+
+        ready_to_end = (
+            (session["questions_asked"] >= MIN_QUESTIONS and len(session["days_covered"]) >= MIN_DAYS)
+            or session["questions_asked"] >= MAX_QUESTIONS
+        )
+
+        if ready_to_end:
+            feedback = generate_feedback(session)
+            return jsonify({"reply": "Interview completed.", "done": True, "feedback": feedback})
+
+        if session["topic_queue"] and random.random() > 0.4:
+            next_q = generate_next_question(session)
+        else:
+            next_q = generate_followup(session, message)
+
+        session["history"].append({"role": "assistant", "content": next_q})
         session["questions_asked"] += 1
+        return jsonify({"reply": next_q, "done": False})
 
-        member = candidate["member"]
-        welcome = f"Welcome, {member['name']}. Let's begin your interview.\n\n{first_question}"
-        return jsonify({"reply": welcome, "done": False})
-
-    # --- TURN ---
-    if session_id not in SESSIONS:
-        return jsonify({"error": "Unknown sessionId. Start the interview first."}), 400
-
-    session = SESSIONS[session_id]
-    message = data.get("message", "")
-    session["history"].append({"role": "user", "content": message})
-
-    ready_to_end = (
-        (session["questions_asked"] >= MIN_QUESTIONS and len(session["days_covered"]) >= MIN_DAYS)
-        or session["questions_asked"] >= MAX_QUESTIONS
-    )
-
-    if ready_to_end:
-        feedback = generate_feedback(session)
-        return jsonify({"reply": "Interview completed.", "done": True, "feedback": feedback})
-
-    if session["topic_queue"] and random.random() > 0.4:
-        next_q = generate_next_question(session)
-    else:
-        next_q = generate_followup(session, message)
-
-    session["history"].append({"role": "assistant", "content": next_q})
-    session["questions_asked"] += 1
-    return jsonify({"reply": next_q, "done": False})
+    except Exception as e:
+        return jsonify({"error": "Something went wrong processing the interview.", "detail": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
