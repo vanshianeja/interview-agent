@@ -188,8 +188,9 @@ def interview():
         message = data.get("message", "")
         session["history"].append({"role": "user", "content": message})
 
+        effective_min_days = min(MIN_DAYS, len(session["candidate"]["missions"]))
         ready_to_end = (
-            (session["questions_asked"] >= MIN_QUESTIONS and len(session["days_covered"]) >= MIN_DAYS)
+            (session["questions_asked"] >= MIN_QUESTIONS and len(session["days_covered"]) >= effective_min_days)
             or session["questions_asked"] >= MAX_QUESTIONS
         )
 
