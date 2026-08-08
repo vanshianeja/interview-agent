@@ -208,6 +208,7 @@ def interview():
         return jsonify({"reply": next_q, "done": False})
 
     except Exception as e:
+        app.logger.error(f"Error in /api/interview: {e}", exc_info=True)
         return jsonify({"error": "Something went wrong processing the interview.", "detail": str(e)}), 500
 
 if __name__ == "__main__":
