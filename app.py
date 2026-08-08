@@ -3,6 +3,7 @@ import json, os, random
 from dotenv import load_dotenv
 import requests
 from flask import render_template
+import time
 
 load_dotenv()
 app = Flask(__name__)
@@ -23,22 +24,27 @@ MODELS = [
 def call_llm(messages, temperature=0.7, max_tokens=400):
     last_error = None
     for model in MODELS:
-        try:
-            resp = requests.post(
-                OPENROUTER_URL,
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={"model": model, "messages": messages,
-                      "temperature": temperature, "max_tokens": max_tokens},
-                timeout=30,
-            )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            last_error = e
-            continue
+        for attempt in range(2):  # try each model up to twice if rate-limited
+            try:
+                resp = requests.post(
+                    OPENROUTER_URL,
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"model": model, "messages": messages,
+                          "temperature": temperature, "max_tokens": max_tokens},
+                    timeout=60,
+                )
+                if resp.status_code == 429:
+                    last_error = f"429 rate limited on {model}"
+                    time.sleep(2)  # brief backoff before retry/next attempt
+                    continue
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                last_error = e
+                break  # non-429 error, move to next model immediately
     raise RuntimeError(f"All models failed: {last_error}")
 
 # ---- Load curriculum once at startup ----
